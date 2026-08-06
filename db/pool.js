@@ -2,13 +2,12 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 // Crear el pool de conexiones de MySQL
-const conexion = mysql.createPool({ // o createConnection, dependiendo de cómo lo tengas
+const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: process.env.DB_PORT,
-  // ¡AGREGA ESTO! 👇
   ssl: {
     rejectUnauthorized: false
   }
@@ -17,7 +16,7 @@ const conexion = mysql.createPool({ // o createConnection, dependiendo de cómo 
 // Comprobar la conexión inicial
 pool.getConnection()
   .then(connection => {
-    console.log('Conectado exitosamente a la base de datos MySQL');
+    console.log('Conectado exitosamente a la base de datos MySQL en Aiven');
     connection.release();
   })
   .catch(error => {
