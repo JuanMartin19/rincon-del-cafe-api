@@ -1,0 +1,74 @@
+require('dotenv').config();
+const express = require('express');
+const http = require('http');
+const path = require('path'); 
+const { Server } = require('socket.io');
+const cors = require('cors');
+
+// Importar rutas estáticas
+const authRoutes = require('./routes/auth.routes');
+const productosRoutes = require('./routes/productos.routes');
+const contactoRoutes = require('./routes/contacto.routes');
+const favoritosRoutes = require('./routes/favoritos.routes');
+const carritoRoutes = require('./routes/carrito.routes');
+const reportesRoutes = require('./routes/reportes.routes');
+const promocionesRoutes = require('./routes/promociones.routes');
+
+const app = express();
+
+// Middleware básico
+app.use(express.json());
+app.use(cors());
+
+// Hacer pública la carpeta 'uploads' para servir las imágenes locales
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Rutas estáticas de tu API
+app.use('/api/auth', authRoutes);
+app.use('/api/productos', productosRoutes);
+app.use('/api/contacto', contactoRoutes);
+app.use('/api/favoritos', favoritosRoutes);
+app.use('/api/carrito', carritoRoutes);
+app.use('/api/reportes', reportesRoutes);
+app.use('/api/promociones', promocionesRoutes);
+
+// Crear servidor HTTP basado en Express
+const server = http.createServer(app);
+
+// Configuración de WebSockets con validación de Origin
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: ["GET", "POST"]
+  }
+});
+
+// ⚡ IMPORTAR Y DECLARAR RUTAS QUE REQUIEREN 'io' AQUÍ ABAJO (Donde io ya existe)
+const pedidosRoutes = require('./routes/pedidos.routes')(io);
+app.use('/api/pedidos', pedidosRoutes);
+
+// Lógica de tiempo real
+io.on('connection', (socket) => {
+  // ⚡ LÍNEA COMENTADA PARA SILENCIAR LA CONSOLA
+  // console.log(`🔌 Dispositivo conectado: ${socket.id}`);
+
+  socket.on('accion_telefono', (data) => {
+    console.log('📱 Acción recibida del teléfono:', data);
+    socket.broadcast.emit('actualizacion_tv', data); 
+  });
+
+  socket.on('datos_wearable', (data) => {
+    socket.broadcast.emit('notificacion_telefono', data);
+  });
+
+  socket.on('disconnect', () => {
+    // ⚡ LÍNEA COMENTADA PARA SILENCIAR LA CONSOLA
+    // console.log(`❌ Dispositivo desconectado: ${socket.id}`);
+  });
+});
+
+// Manejo de puerto
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () => {
+  console.log(`API REST y Servidor WebSocket corriendo en el puerto ${PORT}`);
+});
