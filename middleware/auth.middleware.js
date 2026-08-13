@@ -9,8 +9,12 @@ function verificarToken(req, res, next) {
     return res.status(401).json({ error: 'Token requerido' });
   }
 
-  // Usamos la misma clave secreta de respaldo que en el controlador
-  const secret = process.env.JWT_SECRET || 'secreto_super_seguro_123';
+  // ⚡ Validación estricta del secreto
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.error("ERROR CRÍTICO: La variable de entorno JWT_SECRET no está configurada.");
+    return res.status(500).json({ error: 'Error interno de configuración del servidor' });
+  }
 
   jwt.verify(token, secret, (err, payload) => {
     if (err) {

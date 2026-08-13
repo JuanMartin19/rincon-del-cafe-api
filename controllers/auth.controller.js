@@ -2,6 +2,15 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
 
+// Función auxiliar para obtener el secreto o lanzar error
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("ERROR CRÍTICO: La variable de entorno JWT_SECRET no está configurada.");
+  }
+  return secret;
+};
+
 // POST /api/auth/register
 async function register(req, res) {
   const { nombre, email, password } = req.body;
@@ -59,7 +68,7 @@ async function login(req, res) {
 
     const token = jwt.sign(
       { id: usuario.id, email: usuario.email, rol: usuario.rol }, 
-      process.env.JWT_SECRET || 'secreto_super_seguro_123',
+      getJwtSecret(), // ⚡ Llamada estricta
       { expiresIn: '7d' }
     );
 
@@ -107,7 +116,7 @@ async function loginPin(req, res) {
 
     const token = jwt.sign(
       { id: usuario.id, email: usuario.email },
-      process.env.JWT_SECRET || 'secreto_super_seguro_123',
+      getJwtSecret(), // ⚡ Llamada estricta
       { expiresIn: '1d' }
     );
 
@@ -214,5 +223,4 @@ async function crearUsuarioAdmin(req, res) {
   }
 }
 
-// ⚡ ASEGÚRATE DE INCLUIRLA EN EL MODULE.EXPORTS
 module.exports = { register, login, loginPin, setPin, checkPinStatus, obtenerUsuarios, crearUsuarioAdmin };
