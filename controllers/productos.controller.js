@@ -45,9 +45,10 @@ async function destacados(req, res) {
 async function obtenerPorId(req, res) {
   try {
     const { id } = req.params;
+    // Agregamos descripcion a la consulta para que el formulario la pueda leer
     const [rows] = await pool.query(`
       SELECT id, nombre AS name, categoria AS category, 
-             precio AS price, tipo AS type, imagen AS image 
+             precio AS price, tipo AS type, imagen AS image, descripcion AS description
       FROM productos 
       WHERE id = ?
     `, [id]);
@@ -75,16 +76,19 @@ async function obtenerProductos(req, res) {
 
 // POST /api/productos
 async function crearProducto(req, res) {
-  const { name, category, price, description } = req.body;
-  const image = req.file ? `/uploads/${req.file.filename}` : (req.body.image || '');
-
-  // Calculamos el "tipo" automáticamente para cumplir con la base de datos
-  const tipo = category === 'Postres' ? 'Alimento' : 'Bebida';
+  // Aceptamos nombres de variables en inglés (viejos) o en español (del nuevo formulario)
+  const name = req.body.nombre || req.body.name;
+  const category = req.body.categoria || req.body.category;
+  const price = req.body.precio || req.body.price;
+  const description = req.body.descripcion || req.body.description || '';
+  const tipo = req.body.tipo || (category === 'Postres' ? 'Alimento' : 'Bebida'); // Respeta el tipo del frontend si viene
+  
+  const image = req.file ? `/uploads/${req.file.filename}` : (req.body.imagen || req.body.image || '');
 
   try {
     const [result] = await pool.query(
       'INSERT INTO productos (nombre, categoria, precio, tipo, descripcion, imagen) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, category, price, tipo, description || '', image]
+      [name, category, price, tipo, description, image]
     );
     res.status(201).json({ id: result.insertId, name, category, price, image });
   } catch (err) {
@@ -96,24 +100,28 @@ async function crearProducto(req, res) {
 // PUT /api/productos/:id
 async function actualizarProducto(req, res) {
   const { id } = req.params;
-  const { name, category, price, description } = req.body;
   
-  // Calculamos el "tipo" automáticamente
-  const tipo = category === 'Postres' ? 'Alimento' : 'Bebida';
+  // Aceptamos variables en inglés y en español
+  const name = req.body.nombre || req.body.name;
+  const category = req.body.categoria || req.body.category;
+  const price = req.body.precio || req.body.price;
+  const description = req.body.descripcion || req.body.description || '';
+  const tipo = req.body.tipo || (category === 'Postres' ? 'Alimento' : 'Bebida');
   
   try {
     let imageQuery = '';
-    let params = [name, category, price, tipo, description || ''];
+    let params = [name, category, price, tipo, description];
 
+    // Lógica para la imagen (Archivo vs URL)
     if (req.file) {
       imageQuery = ', imagen = ?';
       params.push(`/uploads/${req.file.filename}`);
-    } else if (req.body.image) {
+    } else if (req.body.imagen || req.body.image) {
       imageQuery = ', imagen = ?';
-      params.push(req.body.image);
+      params.push(req.body.imagen || req.body.image);
     }
 
-    params.push(id);
+    params.push(id); // Para el WHERE id = ?
 
     await pool.query(
       `UPDATE productos SET nombre = ?, categoria = ?, precio = ?, tipo = ?, descripcion = ? ${imageQuery} WHERE id = ?`,

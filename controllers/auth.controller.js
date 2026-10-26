@@ -223,4 +223,43 @@ async function crearUsuarioAdmin(req, res) {
   }
 }
 
-module.exports = { register, login, loginPin, setPin, checkPinStatus, obtenerUsuarios, crearUsuarioAdmin };
+async function cambiarRol(req, res) {
+  const { id } = req.params;
+  const { rol } = req.body;
+
+  if (rol !== 'admin' && rol !== 'cliente') {
+    return res.status(400).json({ error: 'Rol inválido' });
+  }
+
+  try {
+    // Evitar que el administrador se quite los permisos a sí mismo por error
+    if (parseInt(id) === req.usuario.id) {
+      return res.status(403).json({ error: 'No puedes cambiar tu propio rol' });
+    }
+
+    await pool.query('UPDATE usuarios SET rol = ? WHERE id = ?', [rol, id]);
+    res.json({ ok: true, message: `Rol actualizado a ${rol}` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al actualizar el rol' });
+  }
+}
+
+async function eliminarUsuario(req, res) {
+  const { id } = req.params;
+
+  try {
+    // Evitar que el administrador borre su propia cuenta por error
+    if (parseInt(id) === req.usuario.id) {
+      return res.status(403).json({ error: 'No puedes eliminar tu propia cuenta' });
+    }
+
+    await pool.query('DELETE FROM usuarios WHERE id = ?', [id]);
+    res.json({ ok: true, message: 'Usuario eliminado' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al eliminar el usuario' });
+  }
+}
+
+module.exports = { register, login, loginPin, setPin, checkPinStatus, obtenerUsuarios, crearUsuarioAdmin, cambiarRol, eliminarUsuario };

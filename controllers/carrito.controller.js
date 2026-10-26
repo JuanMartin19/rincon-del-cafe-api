@@ -6,7 +6,7 @@ async function obtenerCarrito(req, res) {
     const usuario_id = req.usuario.id;
     const [rows] = await pool.query(`
       SELECT c.id as cart_id, p.id, p.nombre AS name, p.categoria AS category, 
-             p.precio AS price, p.tipo AS type, p.imagen AS image, c.cantidad AS qty
+             p.precio AS price, p.tipo AS type, p.imagen AS image, c.cantidad AS qty, c.tamanio
       FROM carrito c
       INNER JOIN productos p ON c.producto_id = p.id
       WHERE c.usuario_id = ?
@@ -22,7 +22,8 @@ async function obtenerCarrito(req, res) {
 async function agregarAlCarrito(req, res) {
   try {
     const usuario_id = req.usuario.id;
-    const { producto_id, cantidad = 1 } = req.body;
+    // Extraemos el tamanio del body (por defecto Mediano)
+    const { producto_id, cantidad = 1, tamanio = 'Mediano' } = req.body;
 
     const [existing] = await pool.query(
       'SELECT * FROM carrito WHERE usuario_id = ? AND producto_id = ?', 
@@ -31,13 +32,13 @@ async function agregarAlCarrito(req, res) {
 
     if (existing.length > 0) {
       await pool.query(
-        'UPDATE carrito SET cantidad = cantidad + ? WHERE usuario_id = ? AND producto_id = ?',
-        [cantidad, usuario_id, producto_id]
+        'UPDATE carrito SET cantidad = cantidad + ?, tamanio = ? WHERE usuario_id = ? AND producto_id = ?',
+        [cantidad, tamanio, usuario_id, producto_id]
       );
     } else {
       await pool.query(
-        'INSERT INTO carrito (usuario_id, producto_id, cantidad) VALUES (?, ?, ?)',
-        [usuario_id, producto_id, cantidad]
+        'INSERT INTO carrito (usuario_id, producto_id, cantidad, tamanio) VALUES (?, ?, ?, ?)',
+        [usuario_id, producto_id, cantidad, tamanio]
       );
     }
     res.json({ ok: true });
@@ -65,7 +66,7 @@ async function actualizarCantidad(req, res) {
   }
 }
 
-// Vaciar carrito (ej. al terminar compra)
+// Vaciar carrito
 async function vaciarCarrito(req, res) {
   try {
     await pool.query('DELETE FROM carrito WHERE usuario_id = ?', [req.usuario.id]);
