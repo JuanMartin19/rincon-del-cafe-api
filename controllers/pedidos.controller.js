@@ -3,7 +3,9 @@ const pool = require('../db/pool');
 // Obtener pedidos pendientes para el Admin
 async function listarPedidos(req, res) {
   try {
-    const [rows] = await pool.query("SELECT * FROM pedidos WHERE estado = 'pendiente' ORDER BY id DESC");
+    const [rows] = await pool.query(
+      "SELECT * FROM pedidos WHERE LOWER(estado) IN ('pendiente', 'en espera') ORDER BY id DESC"
+    );
     res.json(rows);
   } catch (err) {
     console.error('Error al listar pedidos:', err);

@@ -5,10 +5,11 @@ module.exports = function(io) {
   const { listarPedidos, obtenerMisPedidos, crearPedido, completarPedido } = require('../controllers/pedidos.controller');
   const { verificarToken } = require('../middleware/auth.middleware');
 
-  router.get('/', listarPedidos);
+  // ⚡ Agregamos verificarToken aquí también
+  router.get('/', verificarToken, listarPedidos);
   router.get('/mis-pedidos', verificarToken, obtenerMisPedidos);
   router.post('/', verificarToken, (req, res) => crearPedido(req, res, io));
-  router.put('/:id/completar', completarPedido);
+  router.put('/:id/completar', verificarToken, completarPedido);
 
   return router;
 };
