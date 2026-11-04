@@ -16,9 +16,28 @@ const promocionesRoutes = require('./routes/promociones.routes');
 
 const app = express();
 
+// ⚡ Configuración robusta de CORS para desarrollo y producción
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://el-rincon-del-cafe-gray.vercel.app",
+  process.env.FRONTEND_URL
+].filter(Boolean); // Filtra valores nulos si FRONTEND_URL no está definido
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permitir solicitudes sin origen (como aplicaciones móviles o Postman) o si están en la lista blanca
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Bloqueado por la política CORS'));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"]
+}));
+
 // Middleware básico
 app.use(express.json());
-app.use(cors());
 
 // Hacer pública la carpeta 'uploads' para servir las imágenes locales
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -35,31 +54,28 @@ app.use('/api/promociones', promocionesRoutes);
 // Crear servidor HTTP basado en Express
 const server = http.createServer(app);
 
-// Configuración de WebSockets con validación de Origin
+// Configuración de WebSockets con los mismos orígenes permitidos
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    methods: ["GET", "POST"]
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
-// ⚡ IMPORTAR Y DECLARAR RUTAS QUE REQUIEREN 'io' AQUÍ ABAJO (Donde io ya existe)
+// ⚡ IMPORTAR Y DECLARAR RUTAS QUE REQUIEREN 'io'
 const pedidosRoutes = require('./routes/pedidos.routes')(io);
 app.use('/api/pedidos', pedidosRoutes);
 
-// ⚡ 1. Rutas del chat individual por pedido
+// ⚡ Rutas del chat individual por pedido
 const chatRoutes = require('./routes/chat.routes')(io);
 app.use('/api/chat', chatRoutes);
 
 // Lógica de tiempo real
 io.on('connection', (socket) => {
-  // ⚡ LÍNEA COMENTADA PARA SILENCIAR LA CONSOLA
-  // console.log(`🔌 Dispositivo conectado: ${socket.id}`);
-
-  // ⚡ 2. El cliente avisa a qué pedido entró, para meterlo a una "sala" privada
+  // El cliente avisa a qué pedido entró, para meterlo a una "sala" privada
   socket.on('unirse_pedido', (pedidoId) => {
     socket.join(`pedido_${pedidoId}`);
-    // console.log(`Dispositivo unido a la sala: pedido_${pedidoId}`);
   });
 
   socket.on('accion_telefono', (data) => {
@@ -72,8 +88,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    // ⚡ LÍNEA COMENTADA PARA SILENCIAR LA CONSOLA
-    // console.log(`❌ Dispositivo desconectado: ${socket.id}`);
+    // Desconexión limpia
   });
 });
 
