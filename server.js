@@ -47,10 +47,20 @@ const io = new Server(server, {
 const pedidosRoutes = require('./routes/pedidos.routes')(io);
 app.use('/api/pedidos', pedidosRoutes);
 
+// ⚡ 1. Rutas del chat individual por pedido
+const chatRoutes = require('./routes/chat.routes')(io);
+app.use('/api/chat', chatRoutes);
+
 // Lógica de tiempo real
 io.on('connection', (socket) => {
   // ⚡ LÍNEA COMENTADA PARA SILENCIAR LA CONSOLA
   // console.log(`🔌 Dispositivo conectado: ${socket.id}`);
+
+  // ⚡ 2. El cliente avisa a qué pedido entró, para meterlo a una "sala" privada
+  socket.on('unirse_pedido', (pedidoId) => {
+    socket.join(`pedido_${pedidoId}`);
+    // console.log(`Dispositivo unido a la sala: pedido_${pedidoId}`);
+  });
 
   socket.on('accion_telefono', (data) => {
     console.log('📱 Acción recibida del teléfono:', data);
@@ -72,3 +82,5 @@ const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
   console.log(`API REST y Servidor WebSocket corriendo en el puerto ${PORT}`);
 });
+
+module.exports = app;
