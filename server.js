@@ -16,16 +16,17 @@ const promocionesRoutes = require('./routes/promociones.routes');
 
 const app = express();
 
-// ⚡ Configuración robusta de CORS para desarrollo y producción
 const allowedOrigins = [
   "http://localhost:5173",
   "https://el-rincon-del-cafe-gray.vercel.app",
+  "capacitor://localhost",
+  "https://localhost",
+  "http://localhost",
   process.env.FRONTEND_URL
-].filter(Boolean); // Filtra valores nulos si FRONTEND_URL no está definido
+].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir solicitudes sin origen (como aplicaciones móviles o Postman) o si están en la lista blanca
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
